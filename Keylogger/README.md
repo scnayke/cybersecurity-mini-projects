@@ -8,9 +8,16 @@ This Python-based keylogger captures keystrokes using the `pynput` library and l
 - Logs special keys like Shift, Enter
 - Basic file-based logging
 
-## Usage
+
+### How to Run
 
 ```bash
-pip install pynput
-python keylogger.py
+# Set up virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
+# Install dependencies
+pip install evdev
+
+# Run the keylogger (requires sudo)
+sudo ./venv/bin/python keylogger_evdev.py

@@ -1,0 +1,15 @@
+# .gitignore
+
+# Ignore virtual environments
+venv/
+
+# Ignore Python cache and logs
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.log.txt
+*.swp
+
+# System files
+.DS_Store
