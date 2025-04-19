@@ -5,7 +5,7 @@ A collection of small offensive and defensive cybersecurity projects built for e
 ## Projects
 
 - [Keylogger](./Keylogger)
-- [Network Anomoly Detection - signature based currently](./NetworkAnomolyDetection)
+- [Network Anomaly Detection - signature based currently](./NetworkAnomalyDetection)
 - [Network Sniffer](./NetworkSniffer)
 - [Reverse Shell](./ReverseShell)
 - [AntiMalware Script](./AntiMalware)
