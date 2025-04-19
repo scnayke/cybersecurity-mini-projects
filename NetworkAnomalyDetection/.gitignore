@@ -1,3 +1,14 @@
-__pycache__
+# Ignore Python venvs
+venv/
+__pycache__/
+*.pyc
+
+# Ignore logs
 *.log
-.venv
+
+# VSCode or editor junk
+.vscode/
+.idea/
+
+# System files
+.DS_Store
