@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Anomaly Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        h1 { text-align: center; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        #chart { max-width: 600px; margin: 20px auto; }
+    </style>
+</head>
+<body>
+    <h1>Network Anomaly Dashboard</h1>
+    <canvas id="chart"></canvas>
+    <table>
+        <tr><th>Timestamp</th><th>Anomaly</th></tr>
+        {% for anomaly in anomalies %}
+        <tr><td>{{ anomaly.timestamp }}</td><td>{{ anomaly.message }}</td></tr>
+        {% endfor %}
+    </table>
+    <script>
+        const ctx = document.getElementById('chart').getContext('2d');
+        const typeCounts = {{ type_counts | safe }};
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(typeCounts),
+                datasets: [{
+                    label: 'Anomaly Count',
+                    data: Object.values(typeCounts),
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+    </script>
+</body>
+</html>
