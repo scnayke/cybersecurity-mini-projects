@@ -2,44 +2,164 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Anomaly Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        h1 { text-align: center; color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #4CAF50; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        #chart { max-width: 600px; margin: 20px auto; }
+        canvas { max-height: 300px; }
+        body { font-family: 'Arial', sans-serif; }
     </style>
 </head>
-<body>
-    <h1>Network Anomaly Dashboard</h1>
-    <canvas id="chart"></canvas>
-    <table>
-        <tr><th>Timestamp</th><th>Anomaly</th></tr>
-        {% for anomaly in anomalies %}
-        <tr><td>{{ anomaly.timestamp }}</td><td>{{ anomaly.message }}</td></tr>
-        {% endfor %}
-    </table>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4 text-center">Network Anomaly Dashboard</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Anomaly Counts Table -->
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="text-lg font-semibold mb-2">Anomaly Counts</h2>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-2 text-left">Anomaly Type</th>
+                            <th class="p-2 text-right">Occurrences</th>
+                        </tr>
+                    </thead>
+                    <tbody id="anomaly-table">
+                        {% for anomaly, count in anomaly_counts.items() %}
+                        <tr>
+                            <td class="p-2">{{ anomaly }}</td>
+                            <td class="p-2 text-right">{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Bar Chart -->
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="text-lg font-semibold mb-2">Anomaly Distribution</h2>
+                <canvas id="barChart"></canvas>
+            </div>
+            <!-- Line Chart -->
+            <div class="bg-white p-4 rounded shadow md:col-span-2">
+                <h2 class="text-lg font-semibold mb-2">Anomalies Over Time (Last 10 Minutes)</h2>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const ctx = document.getElementById('chart').getContext('2d');
-        const typeCounts = {{ type_counts | safe }};
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(typeCounts),
-                datasets: [{
-                    label: 'Anomaly Count',
-                    data: Object.values(typeCounts),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: { scales: { y: { beginAtZero: true } } }
+        const socket = io();
+        let barChart, lineChart;
+
+        // Initialize charts
+        function initCharts(anomalyCounts, anomalyTimes) {
+            try {
+                const barCtx = document.getElementById('barChart').getContext('2d');
+                const lineCtx = document.getElementById('lineChart').getContext('2d');
+
+                // Bar Chart
+                if (barChart) barChart.destroy();
+                barChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(anomalyCounts),
+                        datasets: [{
+                            label: 'Occurrences',
+                            data: Object.values(anomalyCounts),
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Anomaly Type' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                // Line Chart (time-series)
+                const timeLabels = [];
+                const datasets = {};
+                const now = new Date();
+                const tenMinAgo = new Date(now - 10 * 60 * 1000);
+                let current = new Date(tenMinAgo);
+
+                // Generate 1-minute intervals
+                while (current <= now) {
+                    timeLabels.push(current.toISOString().slice(11, 16));
+                    current = new Date(current.getTime() + 60 * 1000);
+                }
+
+                // Initialize datasets for each anomaly type
+                Object.keys(anomalyCounts).forEach(type => {
+                    datasets[type] = Array(timeLabels.length).fill(0);
+                });
+
+                // Count anomalies per minute
+                anomalyTimes.forEach(({ time, type }) => {
+                    const t = new Date(time);
+                    const minute = Math.floor((t - tenMinAgo) / (60 * 1000));
+                    if (minute >= 0 && minute < timeLabels.length) {
+                        datasets[type][minute]++;
+                    }
+                });
+
+                if (lineChart) lineChart.destroy();
+                lineChart = new Chart(lineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: Object.keys(datasets).map(type => ({
+                            label: type,
+                            data: datasets[type],
+                            borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                            fill: false
+                        }))
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Occurrences' } },
+                            x: { title: { display: true, text: 'Time (HH:MM)' } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing charts:', error);
+            }
+        }
+
+        // Update table
+        function updateTable(anomalyCounts) {
+            const tableBody = document.getElementById('anomaly-table');
+            tableBody.innerHTML = '';
+            for (const [anomaly, count] of Object.entries(anomalyCounts)) {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td class="p-2">${anomaly}</td>
+                        <td class="p-2 text-right">${count}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Handle WebSocket updates
+        socket.on('update', data => {
+            updateTable(data.anomaly_counts);
+            initCharts(data.anomaly_counts, data.anomaly_times);
         });
+
+        // Initial charts
+        
+        try {
+            initCharts({{ anomaly_counts | tojson | safe }}, []);
+        } catch (error) {
+            console.error('Error in initial chart setup:', error);
+        }
     </script>
 </body>
 </html>

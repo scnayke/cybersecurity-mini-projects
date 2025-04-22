@@ -87,11 +87,12 @@ def analyze_packet(packet, timestamp, threshold):
 
     # ARP detection
     if ARP in packet:
-        print(f"[DEBUG] ARP packet captured: op={packet[ARP].op}, psrc={packet[ARP].psrc}, hwsrc={packet[ARP].hwsrc}")
+        # Optional debug for ARP packets
+        # print(f"[DEBUG] ARP packet captured: op={packet[ARP].op}, psrc={packet[ARP].psrc}, hwsrc={packet[ARP].hwsrc}")
         if packet[ARP].op == 2:  # ARP reply
             ip = packet[ARP].psrc
             mac = packet[ARP].hwsrc
-            log_anomaly(f"⚠️ ARP Reply from {ip} with MAC {mac}")  # Log all ARP replies
+            log_anomaly(f"⚠️ ARP Reply from {ip} with MAC {mac}")
             if ip in arp_table and arp_table[ip] != mac:
                 log_anomaly(f"🚨 Possible ARP spoofing: {ip} mapped to {mac}, previously {arp_table[ip]}")
             arp_table[ip] = mac
